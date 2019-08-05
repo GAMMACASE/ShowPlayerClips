@@ -1,0 +1,12 @@
+"Phrases"
+{
+	"playerclips_disabled"
+	{
+		"en"		"[ShowPlayerClips] Player clips now disabled!"
+	}
+	
+	"playerclips_enabled"
+	{
+		"en"		"[ShowPlayerClips] Player clips now enabled!"
+	}
+}

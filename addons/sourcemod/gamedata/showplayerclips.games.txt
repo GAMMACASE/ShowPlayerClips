@@ -1,0 +1,312 @@
+"Games"
+{
+	"#default"
+	{
+		"Keys"
+		{
+			//EngineTrace interface name
+			"CEngineTrace"	"EngineTraceServer004"
+			
+			//leafvis_t offsets
+			"leafvis_t::verts"					"0"
+			"leafvis_t::polyVertCount"			"20"
+			"leafvis_t::color"					"40"
+			"leafvis_t::numbrushes"				"52"
+			"leafvis_t::numentitychars"			"56"
+			"leafvis_t::leafIndex"				"60"
+			
+			//CUtlVector offsets
+			"CUtlVector::m_pMemory"				"0"
+			"CUtlVector::m_nAllocationCount"	"4"
+			"CUtlVector::m_nGrowSize"			"8"
+			"CUtlVector::m_Size"				"12"
+			"CUtlVector::m_pElements"			"16"
+			
+			//CRangeValidatedArray offsets
+			"CRangeValidatedArray::m_pArray"	"0"
+			"CRangeValidatedArray::m_nCount"	"4"
+			
+			//cplane_t
+			"cplane_t::normal"					"0"
+			"cplane_t::dist"					"12"
+			"cplane_t::type"					"16"
+			"cplane_t::signbits"				"17"
+			
+			//cnode_t offsets
+			"cnode_t::plane"					"0"
+			"cnode_t::children"					"4"
+			"cnode_t::size"						"12"
+			
+			//cboxbrush_t offsets
+			"cboxbrush_t::mins"					"0"
+			"cboxbrush_t::maxs"					"16"
+			"cboxbrush_t::surfaceIndex"			"32"
+			"cboxbrush_t::size"					"48"
+			
+			//cbrush_t offsets
+			"cbrush_t::contents"				"0"
+			"cbrush_t::numsides"				"4"
+			"cbrush_t::firstbrushside"			"6"
+			"cbrush_t::size"					"8"
+			
+			//cleaf_t offsets
+			"cleaf_t::contents"					"0"
+			"cleaf_t::cluster"					"4"
+			"cleaf_t::area"						"6"
+			"cleaf_t::flags"					"7"
+			"cleaf_t::firstleafbrush"			"8"
+			"cleaf_t::numleafbrushes"			"10"
+			"cleaf_t::dispListStart"			"12"
+			"cleaf_t::dispCount"				"14"
+			"cleaf_t::size"						"16"
+			
+			//cbrushside_t offsets
+			"cbrushside_t::plane"				"0"
+			"cbrushside_t::surfaceIndex"		"4"
+			"cbrushside_t::bBevel"				"6"
+			"cbrushside_t::size"				"8"
+			
+			//cmodel_t offsets
+			"cmodel_t::mins"					"0"
+			"cmodel_t::maxs"					"12"
+			"cmodel_t::origin"					"24"
+			"cmodel_t::headnode"				"36"
+			//...
+		}
+		
+		"Offsets"
+		{
+			"WinOrLin"
+			{
+				"windows"		"1"
+				"linux"			"2"
+			}
+		}
+		
+		"Signatures"
+		{
+			"CreateInterface"
+			{
+				"library"		"engine"
+				"windows"		"@CreateInterface"
+				"linux"			"@CreateInterface"
+			}
+		}
+	}
+	
+    "csgo"
+	{
+		"Keys"
+		{
+			//CUtlVectorUnknown size
+			"CUtlVectorUnknown::m_pElements::size"	"8"
+			
+			//cmodel_t size
+			"cmodel_t::size"					"56"
+			
+			//BrushSideInfo_t
+			"BrushSideInfo_t::plane"	"0"
+			"BrushSideInfo_t::bevel"	"20"
+			"BrushSideInfo_t::thin"		"22"
+			"BrushSideInfo_t::Size"		"24"
+			
+			//CCollisionBSPData offsets
+			"CCollisionBSPData::map_rootnode"	"0"
+			//...
+			"CCollisionBSPData::numbrushsides"	"100"
+			"CCollisionBSPData::map_brushsides"	"104"
+			"CCollisionBSPData::numboxbrushes"	"112"
+			"CCollisionBSPData::map_boxbrushes"	"116"
+			//...
+			"CCollisionBSPData::numleafs"		"148"
+			"CCollisionBSPData::map_leafs"		"152"
+			//...
+			"CCollisionBSPData::numleafbrushes"	"168"
+			"CCollisionBSPData::map_leafbrushes" "172"
+			"CCollisionBSPData::numcmodels"		"180"
+			"CCollisionBSPData::map_cmodels"	"184"
+			"CCollisionBSPData::numbrushes"		"192"
+			"CCollisionBSPData::map_brushes"	"196"
+			//...
+		}
+		
+		"Addresses"
+		{
+			"g_BSPData"
+            {
+                "linux"
+                {
+                    "signature" "CM_LoadMap"
+                    "read" "58"
+                }
+            }
+		}
+		
+		"Signatures"
+		{
+			"LeafVisDraw"
+			{
+				"library"		"engine"
+				"windows"		"\x55\x8B\xEC\x83\xE4\xF8\x8B\x0D\x2A\x2A\x2A\x2A\x81\xEC\x34\x03\x00\x00"
+			}
+		
+			"DrawLeafVis"
+			{
+				"library"		"engine"
+				"windows"		"\x55\x8B\xEC\x81\xEC\x1C\x02\x00\x00\x53\x56\x57"
+			}
+			
+			"RecomputeClipbrushes"
+			{
+				"library"		"engine"
+				"windows"		"\x53\x8B\xDC\x83\xEC\x08\x83\xE4\xF8\x83\xC4\x04\x55\x8B\x6B\x04\x89\x6C\x24\x04\x8B\xEC\x83\xEC\x70\x56\x57"
+			}
+			
+			"PolyFromPlane"
+			{
+				"library"		"engine"
+				"linux"			"\x55\x31\xD2\x89\xE5\x56\x53\x83\xEC\x2C"
+			}
+			
+			"ClipPolyToPlane"
+			{
+				"library"		"engine"
+				"linux"			"\x55\x89\xE5\x57\x56\x53\x83\xEC\x4C\xC7\x45\xD8\x00\x00\x00\x00"
+			}
+			
+			"CEngineTrace::GetBrushInfo"
+			{
+				"library"		"engine"
+				"linux"			"\x55\x31\xC0\x89\xE5\x57\x56\x53\x83\xEC\x2C\x8B\x75\x0C\x8B\x5D\x14"
+			}
+			
+			"CM_LoadMap"
+			{
+				"library"		"engine"
+				"linux"			"\x55\x89\xE5\x83\xEC\x28\x89\x5D\xF4\x8B\x5D\x08\xC7\x04\x24\x2A\x2A\x2A\x2A"
+			}
+			
+			"malloc"
+			{
+				"library"		"engine"
+				"linux"			"\x55\x89\xE5\x5D\xE9\x2A\x2A\x2A\x2A\x8D\xB4\x26\x2A\x2A\x2A\x2A\x55\xA1\x2A\x2A\x2A\x2A"
+			}
+			
+			"free"
+			{
+				"library"		"engine"
+				"linux"			"\x55\x89\xE5\x5D\xE9\x2A\x2A\x2A\x2A\x8D\xB4\x26\x00\x00\x00\x00\x55\x89\xE5\x5D\xE9\x2A\x2A\x2A\x2A\x8D\xB4\x26\x00\x00\x00\x00\x55\xA1\x2A\x2A\x2A\x2A"
+			}
+		}
+	}
+	
+	"cstrike"
+	{
+		"Keys"
+		{
+			//CUtlVectorUnknown size
+			"CUtlVectorUnknown::m_pElements::size"	"4"
+			
+			//cmodel_t size
+			"cmodel_t::size"					"52"
+			
+			//BrushSideInfo_t
+			"BrushSideInfo_t::plane"	"0"
+			"BrushSideInfo_t::bevel"	"16"
+			"BrushSideInfo_t::thin"		"18"
+			
+			//CCollisionBSPData offsets
+			"CCollisionBSPData::map_rootnode"	"0"
+			//...
+			"CCollisionBSPData::numbrushsides"	"100"
+			"CCollisionBSPData::map_brushsides"	"104"
+			"CCollisionBSPData::numboxbrushes"	"108"
+			"CCollisionBSPData::map_boxbrushes"	"112"
+			//...
+			"CCollisionBSPData::numleafs"		"132"
+			"CCollisionBSPData::map_leafs"		"136"
+			//...
+			"CCollisionBSPData::numleafbrushes"	"148"
+			"CCollisionBSPData::map_leafbrushes" "152"
+			"CCollisionBSPData::numcmodels"		"156"
+			"CCollisionBSPData::map_cmodels"	"160"
+			"CCollisionBSPData::numbrushes"		"164"
+			"CCollisionBSPData::map_brushes"	"168"
+			//...
+		}
+		
+		"Addresses"
+		{
+			"g_BSPData"
+            {
+                "linux"
+                {
+                    "signature" "g_BSPData"
+                }
+            }
+		}
+		
+		"Signatures"
+		{
+			"LeafVisDraw"
+			{
+				"library"		"engine"
+				"windows"		"\x55\x8B\xEC\xA1\x2A\x2A\x2A\x2A\x81\xEC\x7C\x03\x00\x00"
+			}
+		
+			"DrawLeafVis"
+			{
+				"library"		"engine"
+				"windows"		"\x55\x8B\xEC\x81\xEC\xFC\x01\x00\x00\x8B\x0D\x2A\x2A\x2A\x2A"
+			}
+			
+			"RecomputeClipbrushes"
+			{
+				"library"		"engine"
+				"windows"		"\x55\x8B\xEC\x83\xEC\x4C\x56\x57\xBF\x2A\x2A\x2A\x2A"
+			}
+			
+			"PolyFromPlane"
+			{
+				"library"		"engine"
+				"linux"			"@_Z13PolyFromPlaneP6VectorRKS_ff"
+			}
+			
+			"ClipPolyToPlane"
+			{
+				"library"		"engine"
+				"linux"			"@_Z15ClipPolyToPlaneP6VectoriS0_RKS_ff"
+			}
+			
+			"CM_LoadMap"
+			{
+				"library"		"engine"
+				"linux"			"@_Z10CM_LoadMapPKcbPj"
+			}
+			
+			"CEngineTrace::GetBrushInfo"
+			{
+				"library"		"engine"
+				"linux"			"@_ZN12CEngineTrace12GetBrushInfoEiP10CUtlVectorI8Vector4D10CUtlMemoryIS1_iEEPi"
+			}
+			
+			"malloc"
+			{
+				"library"		"engine"
+				"linux"			"@_ZL7SzAllocPvj"
+			}
+			
+			"free"
+			{
+				"library"		"engine"
+				"linux"			"@_ZL6SzFreePvS_"
+			}
+			
+			"g_BSPData"
+			{
+				"library"		"engine"
+				"linux"			"@g_BSPData"
+			}
+		}
+	}
+}
