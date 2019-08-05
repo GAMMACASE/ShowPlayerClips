@@ -16,3 +16,8 @@ Preview:
 * **spc_beams_width** - Beams width, lower = less visible from distance;
 * **spc_beams_search_delta** - Leave this value as default or a bit smaller then default. Lower the value, more precision for beams, more beams drawn, lower the fps will be. Set to 0 to disable. Map restart needed for this to take effect;
 * **spc_beams_material** - Material used for beams. Server restart needed for this to take effect.
+
+## Requirements:
+
+* [Dhooks with detour support](https://forums.alliedmods.net/showpost.php?p=2588686&postcount=589);
+* SourceMod 1.9-6236 or higher.
