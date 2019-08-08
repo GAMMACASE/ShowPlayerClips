@@ -35,6 +35,62 @@ stock Address operator+(Address l, int r)
 	return l + view_as<Address>(r);
 }
 
+enum //VertsListMembers
+{
+	VL_verts = 0,
+	VL_last = 3,
+	VL_pointsoutside = 4,
+	VL_size = 5
+}
+
+methodmap VertsList < ArrayList
+{
+	public VertsList()
+	{
+		ArrayList array = new ArrayList(VL_size);
+		return view_as<VertsList>(array);
+	}
+	
+	public void GetVerts(int idx, float out[3])
+	{
+		this.GetArray(idx, out, 3);
+	}
+	
+	public void SetVerts(int idx, const float verts[3])
+	{
+		this.SetArray(idx, verts, 3);
+	}
+	
+	public bool isLast(int idx)
+	{
+		return this.Get(idx, VL_last);
+	}
+	
+	public void SetLast(int idx, bool last)
+	{
+		this.Set(idx, last, VL_last);
+	}
+	
+	public bool isOutside(int idx)
+	{
+		return this.Get(idx, VL_pointsoutside);
+	}
+	
+	public void SetOutside(int idx, bool pointOutside)
+	{
+		this.Set(idx, pointOutside, VL_pointsoutside);
+	}
+	
+	public int PushData(const float verts[3], bool last, bool pointsOutside)
+	{
+		int idx = this.PushArray(verts, 3);
+		this.SetLast(idx, last);
+		this.SetOutside(idx, pointsOutside);
+		
+		return idx;
+	}
+}
+
 methodmap AddressBase
 {
 	property Address Address

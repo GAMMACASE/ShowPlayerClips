@@ -19,24 +19,13 @@
 #define MAX_LEAF_PVERTS 128
 #define NUMSIDES_BOXBRUSH 0xFFFF
 
-//Cache data in plugin?
-#define USE_CACHED_VALS 0
-
-//Enable env_spritetrail draw
-//#define USE_SPRITETRAIL 0
-
-/*#if USE_SPRITETRAIL 1
-#define SPRITETRAIL_REFRESHRATE 1.0
-#define SPRITETRAIL_MATERIAL ""
-#endif*/
-
 public Plugin myinfo = 
 {
 	name = "Show Player Clip Brushes",
 	author = "GAMMA CASE",
 	description = "Shows player clip brushes on map.",
-	version = "1.0.0",
-	url = "http://steamcommunity.com/id/_GAMMACASE_/"
+	version = "1.0.1",
+	url = "https://github.com/GAMMACASE/ShowPlayerClips"
 };
 
 enum OSType
@@ -68,9 +57,9 @@ ConVar gCvarCommands,
 	gCvarBeamSearchDelta,
 	gCvarBeamMaterial;
 
-ArrayList gClientsToDraw,
-	gFinalPolyCountEnd[PVIS_COUNT],
-	gFinalVerts[PVIS_COUNT];
+ArrayList gClientsToDraw;
+
+VertsList gFinalVerts[PVIS_COUNT];
 
 //Linux only
 CCollisionBSPData gpBSPData;
@@ -82,12 +71,7 @@ int gModelIndex,
 	gTotalCounter,
 	gColor[PVIS_COUNT][4];
 
-#if USE_CACHED_VALS 1
-ArrayList gVerts[PVIS_COUNT],
-	gPolyVertCount[PVIS_COUNT];
-#else
 Leafvis_t gpVis[PVIS_COUNT];
-#endif
 
 public void OnPluginStart()
 {
@@ -180,32 +164,15 @@ stock bool IsClipsPresent()
 
 public void OnMapEnd()
 {
-#if USE_CACHED_VALS 1
-	for(int i = 0; i < PVIS_COUNT; i++) 
-	{
-		if(gOSType == OSWindows)
-		{
-			delete gVerts[i];
-			delete gPolyVertCount[i];
-		}
-		
-		delete gFinalVerts[i];
-		delete gFinalPolyCountEnd[i];
-		for(int j = 0; j < sizeof(gColor); j++)
-			gColor[i][j] = 0;
-	}
-#else
 	for(int i = 0; i < PVIS_COUNT; i++) 
 	{
 		if(gOSType == OSWindows)
 			gpVis[i] = view_as<Leafvis_t>(0);
 		
 		delete gFinalVerts[i];
-		delete gFinalPolyCountEnd[i];
 		for(int j = 0; j < sizeof(gColor); j++)
 			gColor[i][j] = 0;
 	}
-#endif
 	
 	gpVisIdx = 0;
 }
@@ -232,11 +199,11 @@ public Action DrawClipBrushes(Handle timer)
 		
 		for(int j = gDrawCount[i]; j < gFinalVerts[i].Length - 1; j++)
 		{
-			if(gFinalPolyCountEnd[i].Get(j) == 1)
+			if(gFinalVerts[i].isLast(j) || (gFinalVerts[i].isOutside(j) || gFinalVerts[i].isOutside(j + 1)))
 				continue;
 			
-			gFinalVerts[i].GetArray(j, vec);
-			gFinalVerts[i].GetArray(j + 1, vec2);
+			gFinalVerts[i].GetVerts(j, vec);
+			gFinalVerts[i].GetVerts(j + 1, vec2);
 			
 			//TODO: Rethink the way beams are drawn
 			TE_SetupBeamPoints(vec, vec2, gModelIndex, 0, 0, 0, 
@@ -674,11 +641,11 @@ void TranslatePlaneList(ArrayList planes, float offset[3])
 
 void CalculateVertsLinux(int pVisIdx, ArrayList vertsList, ArrayList vertCountList)
 {
-	gFinalVerts[pVisIdx] = new ArrayList(3);
-	gFinalPolyCountEnd[pVisIdx] = new ArrayList();
+	gFinalVerts[pVisIdx] = new VertsList();
 	ArrayList locvectors = new ArrayList(3);
 	int vert, vertcount, lastidx;
 	float vec[3], vec2[3];
+	bool pointsOutside, pointsOutside2;
 	
 	for(int i = 0; i < vertCountList.Length; i++)
 	{
@@ -690,18 +657,23 @@ void CalculateVertsLinux(int pVisIdx, ArrayList vertsList, ArrayList vertCountLi
 				vertsList.GetArray(vert + j, vec);
 				vertsList.GetArray(vert + ((j + 1) % vertcount), vec2);
 				
+				pointsOutside = TR_PointOutsideWorld(vec);
+				pointsOutside2 = TR_PointOutsideWorld(vec2);
+				
 				if(IsVectorInArray(locvectors, vec, vec2))
 				{
 					if(j == vertcount - 1 && lastidx != 0)
-						gFinalPolyCountEnd[pVisIdx].Set(lastidx, 1);
+						gFinalVerts[gpVisIdx].SetLast(lastidx, true);
 					continue;
 				}
 				
-				gFinalVerts[pVisIdx].PushArray(vec);
-				gFinalVerts[pVisIdx].PushArray(vec2);
+				if(pointsOutside && !pointsOutside2)
+					pointsOutside = RayTraceVerts(vec2, vec);
+				else if(!pointsOutside && pointsOutside2)
+					pointsOutside2 = RayTraceVerts(vec, vec2);
 				
-				gFinalPolyCountEnd[pVisIdx].Push(0);
-				lastidx = gFinalPolyCountEnd[pVisIdx].Push(j == vertcount - 1 ? true : false);
+				gFinalVerts[gpVisIdx].PushData(vec, false, pointsOutside);
+				lastidx = gFinalVerts[gpVisIdx].PushData(vec2, (j == vertcount - 1 ? true : false), pointsOutside2);
 			}
 		}
 		
@@ -724,27 +696,9 @@ public MRESReturn DrawLeafVis_CallBack(Handle hParams)
 	gColor[gpVisIdx][2] = RoundToCeil(pVis.color.z * 255);
 	gColor[gpVisIdx][3] = gCvarBeamAlpha.IntValue;
 	
-#if USE_CACHED_VALS 1
-	gVerts[gpVisIdx] = new ArrayList(3);
-	gPolyVertCount[gpVisIdx] = new ArrayList();
-	
-	int len = pVis.verts.Length;
-	float vec[3];
-	for(int i = 0; i < len; i++)
-	{
-		pVis.verts.Get(i).ToArray(vec);
-		gVerts[gpVisIdx].PushArray(vec);
-	}
-	
-	len = pVis.polyVertCount.Length;
-	for(int i = 0; i < len; i++)
-		gPolyVertCount[gpVisIdx].Push(pVis.polyVertCount.Get(i));
-#else
 	gpVis[gpVisIdx] = pVis;
-#endif
 	
 	CalculateVertsWindows();
-	//RayTraceVerts();
 	gpVisIdx++;
 	
 	return MRES_Supercede;
@@ -752,42 +706,12 @@ public MRESReturn DrawLeafVis_CallBack(Handle hParams)
 
 void CalculateVertsWindows()
 {
-	gFinalVerts[gpVisIdx] = new ArrayList(3);
-	gFinalPolyCountEnd[gpVisIdx] = new ArrayList();
+	gFinalVerts[gpVisIdx] = new VertsList();
 	ArrayList locvectors = new ArrayList(3);
 	int vert, vertcount, lastidx;
 	float vec[3], vec2[3];
+	bool pointsOutside, pointsOutside2;
 	
-#if USE_CACHED_VALS 1
-	for(int i = 0; i < gPolyVertCount[gpVisIdx].Length; i++)
-	{
-		vertcount = gPolyVertCount[gpVisIdx].Get(i);
-		if(vertcount >= 3)
-		{
-			for(int j = 0; j < vertcount; j++)
-			{
-				gVerts[gpVisIdx].GetArray(vert + j, vec);
-				gVerts[gpVisIdx].GetArray(vert + ((j + 1) % vertcount), vec2);
-				
-				if(IsVectorInArray(locvectors, vec, vec2))
-				{
-					if(j == vertcount - 1 && lastidx != 0)
-						gFinalPolyCountEnd[gpVisIdx].Set(lastidx, 1);
-					continue;
-				}
-				
-				gFinalVerts[gpVisIdx].PushArray(vec);
-				gFinalVerts[gpVisIdx].PushArray(vec2);
-				
-				gFinalPolyCountEnd[gpVisIdx].Push(0);
-				lastidx = gFinalPolyCountEnd[gpVisIdx].Push(j == vertcount - 1 ? true : false);
-			}
-		}
-		
-		lastidx = 0;
-		vert += vertcount;
-	}
-#else
 	for(int i = 0; i < gpVis[gpVisIdx].polyVertCount.Length; i++)
 	{
 		vertcount = gpVis[gpVisIdx].polyVertCount.Get(i);
@@ -798,50 +722,44 @@ void CalculateVertsWindows()
 				gpVis[gpVisIdx].verts.Get(vert + j).ToArray(vec);
 				gpVis[gpVisIdx].verts.Get(vert + ((j + 1) % vertcount)).ToArray(vec2);
 				
+				pointsOutside = TR_PointOutsideWorld(vec);
+				pointsOutside2 = TR_PointOutsideWorld(vec2);
+				
 				if(IsVectorInArray(locvectors, vec, vec2))
 				{
 					if(j == vertcount - 1 && lastidx != 0)
-						gFinalPolyCountEnd[gpVisIdx].Set(lastidx, 1);
+						gFinalVerts[gpVisIdx].SetLast(lastidx, true);
 					continue;
 				}
 				
-				gFinalVerts[gpVisIdx].PushArray(vec);
-				gFinalVerts[gpVisIdx].PushArray(vec2);
+				if(pointsOutside && !pointsOutside2)
+					pointsOutside = RayTraceVerts(vec2, vec);
+				else if(!pointsOutside && pointsOutside2)
+					pointsOutside2 = RayTraceVerts(vec, vec2);
 				
-				gFinalPolyCountEnd[gpVisIdx].Push(0);
-				lastidx = gFinalPolyCountEnd[gpVisIdx].Push(j == vertcount - 1 ? true : false);
+				gFinalVerts[gpVisIdx].PushData(vec, false, pointsOutside);
+				lastidx = gFinalVerts[gpVisIdx].PushData(vec2, (j == vertcount - 1 ? true : false), pointsOutside2);
 			}
 		}
 		
 		lastidx = 0;
 		vert += vertcount;
 	}
-#endif
 	
 	delete locvectors;
 }
 
-stock void RayTraceVerts()
+stock bool RayTraceVerts(const float a[3], float a2[3])
 {
-	float vec[3], vec2[3], newvec[3];
+	TR_TraceRay(a, a2, MASK_SOLID, RayType_EndPoint);
 	
-	for(int i = 0; i < gFinalVerts[gpVisIdx].Length - 1; i++)
+	if(TR_DidHit())
 	{
-		if(gFinalPolyCountEnd[gpVisIdx].Get(i))
-			continue;
-		
-		gFinalVerts[gpVisIdx].GetArray(i, vec);
-		gFinalVerts[gpVisIdx].GetArray(i + 1, vec2);
-		
-		if(!TraceAsVector(vec, vec2, newvec, MASK_PLAYERSOLID))
-		{
-			if(TraceAsVector(vec2, vec, newvec, MASK_SOLID))
-				gFinalVerts[gpVisIdx].SetArray(i, newvec);
-		}
-		else if(!TraceAsVector(vec2, vec, newvec, MASK_PLAYERSOLID))
-			if(TraceAsVector(vec, vec2, newvec, MASK_SOLID))
-				gFinalVerts[gpVisIdx].SetArray(i + 1, newvec);
+		TR_GetEndPosition(a2);
+		return false;
 	}
+	
+	return true;
 }
 
 //FIXME: This function is very unoptimized on maps with a lot of clip verts without hack!!!
@@ -880,25 +798,6 @@ stock bool ArrayEqual(float l[3], float r[3], float delta = 0.0)
 	return l[0] <= r[0] + delta && l[0] >= r[0] - delta && 
 			l[1] <= r[1] + delta && l[1] >= r[1] - delta && 
 			l[2] <= r[2] + delta && l[2] >= r[2] - delta;
-}
-
-stock bool TraceAsVector(float pos[3], float pos2[3], float out[3], int mask)
-{
-	float dir[3];
-	
-	dir[0] = pos2[0] - pos[0];
-	dir[1] = pos2[1] - pos[1];
-	dir[2] = pos2[2] - pos[2];
-	
-	TR_TraceRay(pos, dir, mask, RayType_Infinite);
-	
-	if(TR_DidHit())
-	{
-		TR_GetEndPosition(out);
-		return true;
-	}
-	
-	return false;
 }
 
 stock float Clamp(float v, float min, float max)
