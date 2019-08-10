@@ -6,6 +6,8 @@
 		{
 			//EngineTrace interface name
 			"CEngineTrace"	"EngineTraceServer004"
+			//VEngineServer interface name
+			"VEngineServer"	"VEngineServer023"
 			
 			//leafvis_t offsets
 			"leafvis_t::verts"					"0"
@@ -105,10 +107,10 @@
 			"cmodel_t::size"					"56"
 			
 			//BrushSideInfo_t
-			"BrushSideInfo_t::plane"	"0"
-			"BrushSideInfo_t::bevel"	"20"
-			"BrushSideInfo_t::thin"		"22"
-			"BrushSideInfo_t::Size"		"24"
+			"BrushSideInfo_t::plane"			"0"
+			"BrushSideInfo_t::bevel"			"20"
+			"BrushSideInfo_t::thin"				"22"
+			"BrushSideInfo_t::Size"				"24"
 			
 			//CCollisionBSPData offsets
 			"CCollisionBSPData::map_rootnode"	"0"
@@ -142,6 +144,37 @@
             }
 		}
 		
+		"Offsets"
+		{
+			//CVEngineServer::GetClusterForOrigin(Vector const&)
+			"CVEngineServer::GetClusterForOrigin"
+			{
+				"windows"		"13"
+				"linux"			"14"
+			}
+			
+			//CVEngineServer::GetPVSForCluster(int,int,uchar *)
+			"CVEngineServer::GetPVSForCluster"
+			{
+				"windows"		"14"
+				"linux"			"15"
+			}
+			
+			//CVEngineServer::CheckOriginInPVS(Vector const&,uchar const*,int)
+			"CVEngineServer::CheckOriginInPVS"
+			{
+				"windows"		"15"
+				"linux"			"16"
+			}
+			
+			//CVEngineServer::GetClusterCount(void)
+			"CVEngineServer::GetClusterCount"
+			{
+				"windows"		"120"
+				"linux"			"121"
+			}
+		}
+		
 		"Signatures"
 		{
 			"LeafVisDraw"
@@ -160,6 +193,24 @@
 			{
 				"library"		"engine"
 				"windows"		"\x53\x8B\xDC\x83\xEC\x08\x83\xE4\xF8\x83\xC4\x04\x55\x8B\x6B\x04\x89\x6C\x24\x04\x8B\xEC\x83\xEC\x70\x56\x57"
+			}
+			
+			"CBaseClient::SendSnapshot"
+			{
+				"library"		"engine"
+				"windows"		"\x55\x8B\xEC\x83\xE4\xF8\x81\xEC\xA4\x00\x00\x00\x53\x56"
+			}
+			
+			"CBaseServer::WriteTempEntities"
+			{
+				"library"		"engine"
+				"windows"		"\x55\x8B\xEC\x83\xE4\xF8\xB8\x6C\x22\x00\x00"
+			}
+			
+			"CFrameSnapshotManager::BuildSnapshotList"
+			{
+				"library"		"engine"
+				"windows"		"\x55\x8B\xEC\x51\x57\xFF\x15\x2A\x2A\x2A\x2A"
 			}
 			
 			"PolyFromPlane"
@@ -211,9 +262,9 @@
 			"cmodel_t::size"					"52"
 			
 			//BrushSideInfo_t
-			"BrushSideInfo_t::plane"	"0"
-			"BrushSideInfo_t::bevel"	"16"
-			"BrushSideInfo_t::thin"		"18"
+			"BrushSideInfo_t::plane"			"0"
+			"BrushSideInfo_t::bevel"			"16"
+			"BrushSideInfo_t::thin"				"18"
 			
 			//CCollisionBSPData offsets
 			"CCollisionBSPData::map_rootnode"	"0"
@@ -235,6 +286,15 @@
 			//...
 		}
 		
+		"Offsets"
+		{
+			"TELimitSize"
+			{
+				"windows"		"4"
+				"linux"			"4"
+			}
+		}
+		
 		"Addresses"
 		{
 			"g_BSPData"
@@ -242,6 +302,21 @@
                 "linux"
                 {
                     "signature" "g_BSPData"
+                }
+            }
+			
+			"TELimit"
+            {
+                "linux"
+                {
+                    "signature" "CBaseServer::WriteTempEntities"
+					"offset"	"400"
+                }
+				
+				"windows"
+                {
+                    "signature" "CBaseServer::WriteTempEntities"
+					"offset"	"261"
                 }
             }
 		}
@@ -288,6 +363,13 @@
 			{
 				"library"		"engine"
 				"linux"			"@_ZN12CEngineTrace12GetBrushInfoEiP10CUtlVectorI8Vector4D10CUtlMemoryIS1_iEEPi"
+			}
+			
+			"CBaseServer::WriteTempEntities"
+			{
+				"library"		"engine"
+				"linux"			"@_ZN11CBaseServer17WriteTempEntitiesEP11CBaseClientP14CFrameSnapshotS3_R8bf_writei"
+				"windows"		"\x55\x8B\xEC\xB8\x94\x65\x04\x00"
 			}
 			
 			"malloc"

@@ -9,7 +9,7 @@
 #define GAMECONF_FILENAME "showplayerclips.games"
 #define TRANSLATE_FILENAME "showplayerclips.phrases"
 
-#define MAX_TEMPENTS_SEND_CSS 64 - 8
+#define MAX_TEMPENTS_SEND_CSS 255 - 24 //Rised to 255 with bytepatching.
 #define MAX_TEMPENTS_SEND_CSGO 255 - 24
 #define PVIS_COUNT 3
 #define TEMPENT_MIN_LIFETIME 2.0
@@ -24,7 +24,7 @@ public Plugin myinfo =
 	name = "Show Player Clip Brushes",
 	author = "GAMMA CASE",
 	description = "Shows player clip brushes on map.",
-	version = "1.0.1",
+	version = "1.0.2",
 	url = "https://github.com/GAMMACASE/ShowPlayerClips"
 };
 
@@ -60,6 +60,12 @@ ConVar gCvarCommands,
 ArrayList gClientsToDraw;
 
 VertsList gFinalVerts[PVIS_COUNT];
+
+//TElimit bytepatch data
+int gTELimitData[8];
+int gTELimitDataSize;
+Address gTELimitAddress;
+//==-
 
 //Linux only
 CCollisionBSPData gpBSPData;
@@ -97,6 +103,9 @@ public void OnPluginStart()
 	SetupDhooks(gconf);
 	SetupSDKCalls(gconf);
 	
+	if(gEngineVer == Engine_CSS)
+		BytePatchTELimit(gconf);
+	
 	if(gOSType == OSLinux)
 	{
 		//CreateInterfaces(gconf);
@@ -104,6 +113,15 @@ public void OnPluginStart()
 	}
 	
 	delete gconf;
+}
+
+public void OnPluginEnd()
+{
+	if(gTELimitAddress == Address_Null)
+		return;
+	
+	for(int i = 0; i < gTELimitDataSize; i++)
+		StoreToAddress(gTELimitAddress, gTELimitData[i], NumberType_Int8);
 }
 
 public void RegConsoleCommands()
@@ -186,11 +204,12 @@ public void OnClientDisconnect(int client)
 
 public Action DrawClipBrushes(Handle timer)
 {
-	static int clients[MAXPLAYERS];
+	static int clients[MAXPLAYERS], clients2[MAXPLAYERS];
 	int counter;
 	float vec[3], vec2[3];
+	int numclients;
 	
-	GetClientsToDraw(clients, sizeof(clients));
+	//GetClientsToDraw(clients, sizeof(clients));
 	
 	for(int i = 0; i < PVIS_COUNT; i++)
 	{
@@ -207,11 +226,24 @@ public Action DrawClipBrushes(Handle timer)
 			
 			//TODO: Rethink the way beams are drawn
 			TE_SetupBeamPoints(vec, vec2, gModelIndex, 0, 0, 0, 
-					Clamp(gCvarBeamRefreshRate.FloatValue + (float(gTotalCounter) / float((gEngineVer == Engine_CSGO ? MAX_TEMPENTS_SEND_CSGO : MAX_TEMPENTS_SEND_CSS)) * INTERNAL_REFRESHTIME), TEMPENT_MIN_LIFETIME, TEMPENT_MAX_LIFETIME), 
-					gCvarBeamWidth.FloatValue, gCvarBeamWidth.FloatValue, 0, 0.0, gColor[i], 0);
-			TE_Send(clients, gClientsToDraw.Length);
+				Clamp(gCvarBeamRefreshRate.FloatValue + (float(gTotalCounter) / float((gEngineVer == Engine_CSGO ? MAX_TEMPENTS_SEND_CSGO : MAX_TEMPENTS_SEND_CSS)) * INTERNAL_REFRESHTIME), TEMPENT_MIN_LIFETIME, TEMPENT_MAX_LIFETIME), 
+				gCvarBeamWidth.FloatValue, gCvarBeamWidth.FloatValue, 0, 0.0, gColor[i], 0);
 			
 			gDrawCount[i]++;
+			
+			numclients = GetClientsInRange(vec, RangeType_Visibility, clients, MAXPLAYERS);
+			
+			if(numclients == 0)
+				continue;
+			
+			//FIXME:
+			numclients = FilterClients(clients, numclients, clients2);
+			
+			if(numclients == 0)
+				continue;
+			
+			TE_Send(clients2, numclients);
+			
 			counter++;
 			gTotalCounter++;
 			
@@ -226,6 +258,21 @@ public Action DrawClipBrushes(Handle timer)
 	return Plugin_Continue;
 }
 
+//FIXME:
+stock int FilterClients(const int[] clients, int size, int[] outclients)
+{
+	int counter;
+	for(int i = 0; i < size; i++)
+	{
+		if(gClientsToDraw.FindValue(GetClientUserId(clients[i])) != -1)
+		{
+			outclients[counter++] = clients[i];
+		}
+	}
+	
+	return counter;
+}
+
 public Action RedrawClipBrushes(Handle timer)
 {
 	if(gClientsToDraw.Length == 0)
@@ -234,6 +281,7 @@ public Action RedrawClipBrushes(Handle timer)
 	for(int i = 0; i < PVIS_COUNT; i++)
 		gDrawCount[i] = 0;
 	gTotalCounter = 0;
+	
 	DrawClipBrushes(INVALID_HANDLE);
 	
 	return Plugin_Continue;
@@ -288,6 +336,7 @@ void SetupDhooks(Handle gconf)
 {
 	if(gOSType == OSWindows)
 	{
+		//DrawLeafVis
 		DHOOK_SETUP_DETOUR(dhook, CallConv_CDECL, ReturnType_Void, ThisPointer_Ignore, gconf, SDKConf_Signature, "DrawLeafVis");
 		
 		DHookAddParam(dhook, HookParamType_Int, .custom_register = (gEngineVer == Engine_CSGO ? DHookRegister_ECX : DHookRegister_Default));
@@ -381,6 +430,21 @@ void GetCollisionBSPData(Handle gconf)
 	ASSERT(gpBSPData.Address == Address_Null, "Invalid gpBSPData retrieved from \"g_BSPData\" address.");
 }
 
+stock void BytePatchTELimit(Handle gconf)
+{
+	//TELimit
+	gTELimitAddress = GameConfGetAddress(gconf, "TELimit");
+	ASSERT(gTELimitAddress == Address_Null, "Failed to get addres of \"TELimit\".");
+	
+	gTELimitDataSize = GameConfGetOffset(gconf, "TELimitSize");
+	ASSERT(gTELimitDataSize == 0, "0 length found in gamedata for \"TELimitSize\".");
+	
+	for(int i = 0; i < gTELimitDataSize; i++)
+		gTELimitData[i] = LoadFromAddress(gTELimitAddress + i, NumberType_Int8);
+	
+	StoreToAddress(gTELimitAddress, 0x90909090, NumberType_Int32);
+}
+
 void RecomputeClipbrushes()
 {
 	int ibrush, contents[PVIS_COUNT] = {CONTENTS_PLAYERCLIP|CONTENTS_MONSTERCLIP, CONTENTS_MONSTERCLIP, CONTENTS_PLAYERCLIP};
@@ -403,9 +467,9 @@ void RecomputeClipbrushes()
 		vertsList.Clear();
 		vertCountList.Clear();
 		
-		gColor[j][0] = j != 1 ? 255 : 125;
+		gColor[j][0] = (j != 1 ? 255 : 125);
 		gColor[j][1] = 0;
-		gColor[j][2] = j != 0 ? 255 : 0;
+		gColor[j][2] = (j != 0 ? 255 : 0);
 		gColor[j][3] = gCvarBeamAlpha.IntValue;
 		
 		for(ibrush = 0; ibrush < lastBrush; ibrush++)
@@ -663,7 +727,7 @@ void CalculateVertsLinux(int pVisIdx, ArrayList vertsList, ArrayList vertCountLi
 				if(IsVectorInArray(locvectors, vec, vec2))
 				{
 					if(j == vertcount - 1 && lastidx != 0)
-						gFinalVerts[gpVisIdx].SetLast(lastidx, true);
+						gFinalVerts[pVisIdx].SetLast(lastidx, true);
 					continue;
 				}
 				
@@ -672,8 +736,8 @@ void CalculateVertsLinux(int pVisIdx, ArrayList vertsList, ArrayList vertCountLi
 				else if(!pointsOutside && pointsOutside2)
 					pointsOutside2 = RayTraceVerts(vec, vec2);
 				
-				gFinalVerts[gpVisIdx].PushData(vec, false, pointsOutside);
-				lastidx = gFinalVerts[gpVisIdx].PushData(vec2, (j == vertcount - 1 ? true : false), pointsOutside2);
+				gFinalVerts[pVisIdx].PushData(vec, false, pointsOutside);
+				lastidx = gFinalVerts[pVisIdx].PushData(vec2, (j == vertcount - 1 ? true : false), pointsOutside2);
 			}
 		}
 		
