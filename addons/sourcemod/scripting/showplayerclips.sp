@@ -9,12 +9,13 @@
 #define GAMECONF_FILENAME "showplayerclips.games"
 #define TRANSLATE_FILENAME "showplayerclips.phrases"
 
-#define MAX_TEMPENTS_SEND_CSS 255 - 24 //Rised to 255 with bytepatching.
-#define MAX_TEMPENTS_SEND_CSGO 255 - 24
+#define MAX_TEMPENTS_SEND_CSS (255 - 24) //Rised to 255 with bytepatching.
+#define MAX_TEMPENTS_SEND_CSGO (255 - 24)
 #define PVIS_COUNT 3
-#define TEMPENT_MIN_LIFETIME 2.0
+#define TEMPENT_MIN_LIFETIME 1.0
 #define TEMPENT_MAX_LIFETIME 25.0
-#define INTERNAL_REFRESHTIME 0.02
+#define INTERNAL_REFRESHTIME 0.1
+//#define INTERNAL_DELTA 0.25
 
 #define MAX_LEAF_PVERTS 128
 #define NUMSIDES_BOXBRUSH 0xFFFF
@@ -24,7 +25,7 @@ public Plugin myinfo =
 	name = "Show Player Clip Brushes",
 	author = "GAMMA CASE",
 	description = "Shows player clip brushes on map.",
-	version = "1.0.2",
+	version = "1.0.3",
 	url = "https://github.com/GAMMACASE/ShowPlayerClips"
 };
 
@@ -56,6 +57,7 @@ ConVar gCvarCommands,
 	gCvarBeamWidth,
 	gCvarBeamSearchDelta,
 	gCvarBeamMaterial;
+//	gCvarDynamicTimer;
 
 ArrayList gClientsToDraw;
 
@@ -77,24 +79,32 @@ int gModelIndex,
 	gTotalCounter,
 	gColor[PVIS_COUNT][4];
 
+float gRefreshRate,
+	gTickInterval;
+
+bool gClipsPresent;
+
 Leafvis_t gpVis[PVIS_COUNT];
 
 public void OnPluginStart()
 {
 	gCvarCommands = CreateConVar("spc_commands", "sm_showbrushes;sm_showclips;sm_showclipbrushes;sm_showplayerclips;sm_scb;sm_spc", "Available command names for toggling clip brushes visibility. (NOTE: Write command names with \"sm_\" prefix, and don't use ! or any other symbol except A-Z, 0-9 or underline symbol \"_\", also server needs to be restarted to see changes!)")
-	gCvarBeamRefreshRate = CreateConVar("spc_beams_refresh_rate", "5.0", "Refresh rate at which beams will be drawn, don't set this to very low value! Map restart needed for this to take effect.", .hasMin = true, .min = 0.1, .hasMax = true, .max = TEMPENT_MAX_LIFETIME);
+	gCvarBeamRefreshRate = CreateConVar("spc_beams_refresh_rate", "5.0", "Refresh rate at which beams will be drawn, don't set this to very low value! Map restart needed for this to take effect."/* (NOTE: Works only when \"spc_beams_refreshtime_dynamic\" set to 0)"*/, .hasMin = true, .min = 0.1, .hasMax = true, .max = TEMPENT_MAX_LIFETIME);
 	gCvarBeamAlpha = CreateConVar("spc_beams_alpha", "255", "Alpha value for beams, lower = more transperent. Map restart needed for this to take effect.", .hasMin = true, .hasMax = true, .max = 255.0);
 	gCvarBeamWidth = CreateConVar("spc_beams_width", "1.0", "Beams width, lower = less visible from distance.", .hasMin = true);
 	gCvarBeamSearchDelta = CreateConVar("spc_beams_search_delta", "0.5", "Leave this value as default or a bit smaller then default. Lower the value, more precision for beams, more beams drawn, lower the fps will be. Set to 0 to disable. Map restart needed for this to take effect.", .hasMin = true);
 	gCvarBeamMaterial = CreateConVar("spc_beams_material", "sprites/laserbeam.vmt", "Material used for beams. Server restart needed for this to take effect.");
+	//TODO: Possibly a bad idea
+	//gCvarDynamicTimer = CreateConVar("spc_beams_refreshtime_dynamic", "0", "Use dynamically calculated refresh time, may speed up showing beams when toggling command.", .hasMin = true, .hasMax = true, .max = 1.0);
 	AutoExecConfig();
 	
 	LoadTranslations(TRANSLATE_FILENAME);
 	RegConsoleCommands();
 	
-	gEngineVer = GetEngineVersion();
-	
 	gClientsToDraw = new ArrayList();
+	
+	gEngineVer = GetEngineVersion();
+	gTickInterval = GetTickInterval();
 	
 	SETUP_GAMECONF(gconf, GAMECONF_FILENAME);
 	
@@ -107,10 +117,7 @@ public void OnPluginStart()
 		BytePatchTELimit(gconf);
 	
 	if(gOSType == OSLinux)
-	{
-		//CreateInterfaces(gconf);
 		GetCollisionBSPData(gconf);
-	}
 	
 	delete gconf;
 }
@@ -166,18 +173,38 @@ public void OnMapStart()
 		RecomputeClipbrushes();
 	}
 	
-	if(IsClipsPresent())
-	{
-		CreateTimer(gCvarBeamRefreshRate.FloatValue, RedrawClipBrushes, .flags = TIMER_FLAG_NO_MAPCHANGE | TIMER_REPEAT);
-	}
+	CheckClipsPresent();
+	
+	/*if(gCvarDynamicTimer.BoolValue)
+		gRefreshRate = float(GetTotalVertsCount()) / float(GetMaxTempEntsCount()) * INTERNAL_REFRESHTIME;
+	else
+		gRefreshRate = gCvarBeamRefreshRate.FloatValue;*/
+	
+	gRefreshRate = Clamp(gCvarBeamRefreshRate.FloatValue, TEMPENT_MIN_LIFETIME, TEMPENT_MAX_LIFETIME);
 }
 
-stock bool IsClipsPresent()
+stock int GetTotalVertsCount()
 {
+	int count;
 	for(int i = 0; i < PVIS_COUNT; i++)
 		if(gFinalVerts[i])
-			return true;
-	return false;
+			count += gFinalVerts[i].Length;
+	
+	return count;
+}
+
+stock void CheckClipsPresent()
+{
+	for(int i = 0; i < PVIS_COUNT; i++)
+	{
+		if(gFinalVerts[i])
+		{
+			gClipsPresent = true;
+			return;
+		}
+	}
+	
+	gClipsPresent = false;
 }
 
 public void OnMapEnd()
@@ -193,6 +220,7 @@ public void OnMapEnd()
 	}
 	
 	gpVisIdx = 0;
+	gClipsPresent = false;
 }
 
 public void OnClientDisconnect(int client)
@@ -202,7 +230,84 @@ public void OnClientDisconnect(int client)
 		gClientsToDraw.Erase(idx);
 }
 
-public Action DrawClipBrushes(Handle timer)
+public void OnGameFrame()
+{
+	static int frameCounter;
+	static float nextTime, timeDelta;
+	static bool redrawing;
+	
+	if(!gClipsPresent)
+		return;
+	
+	if(gClientsToDraw.Length == 0)
+		return;
+	
+	if(!redrawing)
+	{
+		timeDelta = float(gTotalCounter) / float(GetMaxTempEntsCount()) * INTERNAL_REFRESHTIME;
+		
+		if(gRefreshRate - timeDelta > 0 && float(++frameCounter) / ((gRefreshRate - timeDelta) / gTickInterval) < 1.0)
+			return;
+		else
+		{
+			frameCounter = 0;
+			
+			for(int i = 0; i < PVIS_COUNT; i++)
+				gDrawCount[i] = 0;
+			gTotalCounter = 0;
+		}
+	}
+	else if(nextTime > GetEngineTime())
+		return;
+	
+	if(!DrawClipBrushes())
+	{
+		nextTime = GetEngineTime() + INTERNAL_REFRESHTIME;
+		redrawing = true;
+		return;
+	}
+	
+	redrawing = false;
+}
+
+//TODO: Unused?
+stock float PredictRefreshTime()
+{
+	static int clients[MAXPLAYERS], clients2[MAXPLAYERS];
+	int counter, numclients;
+	float vec[3];
+	
+	for(int i = 0; i < PVIS_COUNT; i++)
+	{
+		if(!gFinalVerts[i])
+			continue;
+		
+		for(int j = 0; j < gFinalVerts[i].Length - 1; j++)
+		{
+			if(gFinalVerts[i].isLast(j) || (gFinalVerts[i].isOutside(j) || gFinalVerts[i].isOutside(j + 1)))
+				continue;
+			
+			gFinalVerts[i].GetVerts(j, vec);
+			
+			numclients = GetClientsInRange(vec, RangeType_Visibility, clients, sizeof(clients));
+			
+			if(numclients == 0)
+				continue;
+			
+			//FIXME:
+			numclients = FilterClients(clients, numclients, clients2);
+			
+			if(numclients == 0)
+				continue;
+			
+			counter++;
+		}
+	}
+	
+	return Clamp(float(counter) / float(GetMaxTempEntsCount()) * INTERNAL_REFRESHTIME, TEMPENT_MIN_LIFETIME, TEMPENT_MAX_LIFETIME);
+}
+
+public bool DrawClipBrushes()
 {
 	static int clients[MAXPLAYERS], clients2[MAXPLAYERS];
 	int counter;
@@ -226,12 +331,11 @@ public Action DrawClipBrushes(Handle timer)
 			
 			//TODO: Rethink the way beams are drawn
 			TE_SetupBeamPoints(vec, vec2, gModelIndex, 0, 0, 0, 
-				Clamp(gCvarBeamRefreshRate.FloatValue + (float(gTotalCounter) / float((gEngineVer == Engine_CSGO ? MAX_TEMPENTS_SEND_CSGO : MAX_TEMPENTS_SEND_CSS)) * INTERNAL_REFRESHTIME), TEMPENT_MIN_LIFETIME, TEMPENT_MAX_LIFETIME), 
+				//FIXME: Refresh time calculated absolutely wrong here
+				Clamp(gRefreshRate + (gTotalCounter / GetMaxTempEntsCount() * INTERNAL_REFRESHTIME)/*gRefreshRate + INTERNAL_DELTA*/, TEMPENT_MIN_LIFETIME, TEMPENT_MAX_LIFETIME), 
 				gCvarBeamWidth.FloatValue, gCvarBeamWidth.FloatValue, 0, 0.0, gColor[i], 0);
 			
-			gDrawCount[i]++;
-			
-			numclients = GetClientsInRange(vec, RangeType_Visibility, clients, MAXPLAYERS);
+			numclients = GetClientsInRange(vec, RangeType_Visibility, clients, sizeof(clients));
 			
 			if(numclients == 0)
 				continue;
@@ -247,15 +351,15 @@ public Action DrawClipBrushes(Handle timer)
 			counter++;
 			gTotalCounter++;
 			
-			if(counter >= (gEngineVer == Engine_CSGO ? MAX_TEMPENTS_SEND_CSGO : MAX_TEMPENTS_SEND_CSS))
+			if(counter >= GetMaxTempEntsCount())
 			{
-				CreateTimer(INTERNAL_REFRESHTIME, DrawClipBrushes, .flags = TIMER_FLAG_NO_MAPCHANGE);
-				return Plugin_Continue;
+				gDrawCount[i] = j;
+				return false;
 			}
 		}
 	}
 	
-	return Plugin_Continue;
+	return true;
 }
 
 //FIXME:
@@ -273,18 +377,9 @@ stock int FilterClients(const int[] clients, int size, int[] outclients)
 	return counter;
 }
 
-public Action RedrawClipBrushes(Handle timer)
+stock int GetMaxTempEntsCount()
 {
-	if(gClientsToDraw.Length == 0)
-		return Plugin_Continue;
-	
-	for(int i = 0; i < PVIS_COUNT; i++)
-		gDrawCount[i] = 0;
-	gTotalCounter = 0;
-	
-	DrawClipBrushes(INVALID_HANDLE);
-	
-	return Plugin_Continue;
+	return gEngineVer == Engine_CSGO ? MAX_TEMPENTS_SEND_CSGO : MAX_TEMPENTS_SEND_CSS
 }
 
 stock void GetClientsToDraw(int[] clients, int size)
