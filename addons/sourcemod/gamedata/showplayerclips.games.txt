@@ -338,7 +338,7 @@
 			"RecomputeClipbrushes"
 			{
 				"library"		"engine"
-				"windows"		"\x55\x8B\xEC\x83\xEC\x4C\x56\x57\xBF\x2A\x2A\x2A\x2A"
+				"windows"		"\x55\x8B\xEC\x83\xEC\x48\x56\x57"
 			}
 			
 			"PolyFromPlane"
