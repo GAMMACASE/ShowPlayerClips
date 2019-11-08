@@ -25,7 +25,7 @@ public Plugin myinfo =
 	name = "Show Player Clip Brushes",
 	author = "GAMMA CASE",
 	description = "Shows player clip brushes on map.",
-	version = "1.0.3",
+	version = "1.1.0",
 	url = "https://github.com/GAMMACASE/ShowPlayerClips"
 };
 
