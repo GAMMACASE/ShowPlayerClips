@@ -4,7 +4,7 @@
 	{
 		"en"		"[ShowPlayerClips] Player clips now disabled!"
 		"ru"		"[ShowPlayerClips] Player clips теперь выключен!"
-		"ua"		"[ShowPlayerClips] ПлPlayer clipsагін зараз виключений!"
+		"ua"		"[ShowPlayerClips] Player clips зараз виключений!"
 	}
 	
 	"playerclips_enabled"
