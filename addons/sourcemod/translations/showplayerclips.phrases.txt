@@ -3,14 +3,14 @@
 	"playerclips_disabled"
 	{
 		"en"		"[ShowPlayerClips] Player clips now disabled!"
-		"ru"		"[ShowPlayerClips] Плагин теперь выключен!"
-		"ua"		"[ShowPlayerClips] Плагін зараз виключений!"
+		"ru"		"[ShowPlayerClips] Player clips теперь выключен!"
+		"ua"		"[ShowPlayerClips] ПлPlayer clipsагін зараз виключений!"
 	}
 	
 	"playerclips_enabled"
 	{
 		"en"		"[ShowPlayerClips] Player clips now enabled!"
-		"ru"		"[ShowPlayerClips] Плагин теперь включен!"
-		"ua"		"[ShowPlayerClips] Плагін зараз включений!"
+		"ru"		"[ShowPlayerClips] Player clips теперь включен!"
+		"ua"		"[ShowPlayerClips] Player clips зараз включений!"
 	}
 }
