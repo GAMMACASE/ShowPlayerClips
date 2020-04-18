@@ -13,13 +13,13 @@ static StringMap ghArraysMap;
 	ghArraysMap.SetValue(%1, %3, true)
 
 #define DYNARRAY_GETSIZE(%1,%2) Format(%1, sizeof(%1), "%i_size", this.Address); \
-	ASSERT(!ghArraysMap.GetValue(%1, %2), "Failed to get length of the array from the ghArraysMap!")
+	ASSERT_MSG(ghArraysMap.GetValue(%1, %2), "Failed to get length of the array from the ghArraysMap!")
 
 #define DYNARRAY_GETLENGTH(%1,%2) Format(%1, sizeof(%1), "%i_length", this.Address); \
-	ASSERT(!ghArraysMap.GetValue(%1, %2), "Failed to get size of each element from the ghArraysMap!")
+	ASSERT_MSG(ghArraysMap.GetValue(%1, %2), "Failed to get size of each element from the ghArraysMap!")
 
 #define DYNARRAY_GETTEMP(%1,%2) Format(%1, sizeof(%1), "%i_temp", this.Address); \
-	ASSERT(!ghArraysMap.GetValue(%1, %2), "Failed to get temp from the ghArraysMap!")
+	ASSERT_MSG(ghArraysMap.GetValue(%1, %2), "Failed to get temp from the ghArraysMap!")
 
 #define DYNARRAY_END(%1) Format(%1, sizeof(%1), "%i_length", this.Address); \
 	ghArraysMap.Remove(%1); \
@@ -251,8 +251,8 @@ methodmap CUtlVectorUnknown < CUtlVectorBase
 	
 	public int Get(int idx)
 	{
-		ASSERT(!this, "CUtlVectorUnknown trying to get values from null.");
-		ASSERT_FMT(idx > this.Length, "CUtlVectorUnknown wrong idx passed. (%i, length %i)", idx, this.Length);
+		ASSERT_MSG(this, "CUtlVectorUnknown trying to get values from null.");
+		ASSERT_FMT(idx < this.Length, "CUtlVectorUnknown wrong idx passed. (%i, length %i)", idx, this.Length);
 		
 		return LoadFromAddress(this.m_pElements + (idx * CUtlVectorUnknown_m_pElements_size), NumberType_Int32);
 	}
@@ -268,8 +268,8 @@ methodmap CUtlVectorVector < CUtlVectorBase
 	
 	public Vector Get(int idx)
 	{
-		ASSERT(!this, "CUtlVectorVector trying to get values from null.");
-		ASSERT_FMT(idx > this.Length, "CUtlVectorVector wrong idx passed. (%i, length %i)", idx, this.Length);
+		ASSERT_MSG(this, "CUtlVectorVector trying to get values from null.");
+		ASSERT_FMT(idx < this.Length, "CUtlVectorVector wrong idx passed. (%i, length %i)", idx, this.Length);
 		
 		return view_as<Vector>(this.m_pElements + (idx * 12));
 	}
@@ -286,8 +286,8 @@ methodmap CUtlVectorVector4D < CUtlVectorBase
 	
 	public Vector4D Get(int idx)
 	{
-		ASSERT(!this, "CUtlVectorVector4D trying to get values from null.");
-		ASSERT_FMT(idx > this.Length, "CUtlVectorVector4D wrong idx passed. (%i, length %i)", idx, this.Length);
+		ASSERT_MSG(this, "CUtlVectorVector4D trying to get values from null.");
+		ASSERT_FMT(idx < this.Length, "CUtlVectorVector4D wrong idx passed. (%i, length %i)", idx, this.Length);
 		
 		return view_as<Vector4D>(this.m_pElements + (idx * 16));
 	}
@@ -365,7 +365,7 @@ methodmap CRangeValidatedArray < AddressBase
 	{
 		public get() 
 		{
-			ASSERT(gEngineVer == Engine_CSS, "Failed to get m_nCount member.");
+			//ASSERT_MSG(gEngineVer != Engine_CSS, "Failed to get m_nCount member.");
 			return LoadFromAddress(this.Address + CRangeValidatedArray_offsets[CRangeValidatedArray_m_nCount], NumberType_Int32);
 		}
 	}
@@ -530,7 +530,7 @@ methodmap Cnode_t < AddressBase
 	
 	public int children(int idx)
 	{
-		ASSERT(idx > 2, "Failed to get children member from cnode_t.");
+		ASSERT_MSG(idx < 2, "Failed to get children member from cnode_t.");
 		
 		return LoadFromAddress(this.Address + Cnode_t_offsets[Cnode_t_children] + (4 * idx), NumberType_Int32);
 	}
@@ -607,7 +607,7 @@ methodmap BrushSideInfo_t < AddressBase
 	{
 		public get()
 		{
-			ASSERT(gEngineVer != Engine_CSS, "Trying to get wrong member for BrushSideInfo_t (plane)");
+			ASSERT_MSG(gEngineVer == Engine_CSS, "Trying to get wrong member for BrushSideInfo_t (plane)");
 			return view_as<Vector4D>(this.Address + BrushSideInfo_t_offsets[BrushSideInfo_t_plane]);
 		}
 	}
@@ -616,7 +616,7 @@ methodmap BrushSideInfo_t < AddressBase
 	{
 		public get() 
 		{ 
-			ASSERT(gEngineVer != Engine_CSGO, "Trying to get wrong member for BrushSideInfo_t (plane)");
+			ASSERT_MSG(gEngineVer == Engine_CSGO, "Trying to get wrong member for BrushSideInfo_t (plane)");
 			return view_as<Cplane_t>(this.Address + BrushSideInfo_t_offsets[BrushSideInfo_t_plane]);
 		}
 	}
@@ -761,7 +761,7 @@ methodmap PseudoPtrArray < AllocatableBase
 	
 	public static PseudoPtrArray FromAddress(Address addr, int length, int sizeOfOneElem, bool temp = false)
 	{
-		ASSERT(addr == Address_Null, "Null address passed to PseudoPtrArray constructor!");
+		ASSERT_MSG(addr != Address_Null, "Null address passed to PseudoPtrArray constructor!");
 		DYNARRAY_START();
 		
 		char buff[32];
@@ -788,7 +788,7 @@ methodmap PseudoPtrArray < AllocatableBase
 		char buff[32];
 		DYNARRAY_GETLENGTH(buff, ibuff);
 		if(ibuff != -1)
-			ASSERT_FMT(idx >= ibuff || idx < 0, "Invalid idx for PseudoPtrArray (%i, length %i)", idx, ibuff);
+			ASSERT_FMT(idx < ibuff || idx >= 0, "Invalid idx for PseudoPtrArray (%i, length %i)", idx, ibuff);
 		
 		DYNARRAY_GETSIZE(buff, ibuff);
 		
@@ -961,6 +961,71 @@ void RetrieveOffsets(Handle gconf)
 		//CUtlVectorUnknown::m_pElements::size
 		GameConfGetKeyValue(gconf, "CUtlVectorUnknown::m_pElements::size", buff, sizeof(buff));
 		CUtlVectorUnknown_m_pElements_size = StringToInt(buff);
+		
+		if(gEngineVer == Engine_CSS)
+		{
+			//CRangeValidatedArray
+			GameConfGetKeyValue(gconf, "CRangeValidatedArray::m_pArray", buff, sizeof(buff));
+			CRangeValidatedArray_offsets[CRangeValidatedArray_m_pArray] = StringToInt(buff);
+			GameConfGetKeyValue(gconf, "CRangeValidatedArray::m_nCount", buff, sizeof(buff));
+			CRangeValidatedArray_offsets[CRangeValidatedArray_m_nCount] = StringToInt(buff);
+			
+			//cnode_t
+			GameConfGetKeyValue(gconf, "cnode_t::plane", buff, sizeof(buff));
+			Cnode_t_offsets[Cnode_t_plane] = StringToInt(buff);
+			GameConfGetKeyValue(gconf, "cnode_t::children", buff, sizeof(buff));
+			Cnode_t_offsets[Cnode_t_children] = StringToInt(buff);
+			GameConfGetKeyValue(gconf, "cnode_t::size", buff, sizeof(buff));
+			Cnode_t_size = StringToInt(buff);
+			
+			//cleaf_t
+			GameConfGetKeyValue(gconf, "cleaf_t::contents", buff, sizeof(buff));
+			Cleaf_t_offsets[Cleaf_t_contents] = StringToInt(buff);
+			GameConfGetKeyValue(gconf, "cleaf_t::cluster", buff, sizeof(buff));
+			Cleaf_t_offsets[Cleaf_t_cluster] = StringToInt(buff);
+			GameConfGetKeyValue(gconf, "cleaf_t::area", buff, sizeof(buff));
+			Cleaf_t_offsets[Cleaf_t_area] = StringToInt(buff);
+			GameConfGetKeyValue(gconf, "cleaf_t::flags", buff, sizeof(buff));
+			Cleaf_t_offsets[Cleaf_t_flags] = StringToInt(buff);
+			GameConfGetKeyValue(gconf, "cleaf_t::firstleafbrush", buff, sizeof(buff));
+			Cleaf_t_offsets[Cleaf_t_firstleafbrush] = StringToInt(buff);
+			GameConfGetKeyValue(gconf, "cleaf_t::numleafbrushes", buff, sizeof(buff));
+			Cleaf_t_offsets[Cleaf_t_numleafbrushes] = StringToInt(buff);
+			GameConfGetKeyValue(gconf, "cleaf_t::dispListStart", buff, sizeof(buff));
+			Cleaf_t_offsets[Cleaf_t_dispListStart] = StringToInt(buff);
+			GameConfGetKeyValue(gconf, "cleaf_t::dispCount", buff, sizeof(buff));
+			Cleaf_t_offsets[Cleaf_t_dispCount] = StringToInt(buff);
+			GameConfGetKeyValue(gconf, "cleaf_t::size", buff, sizeof(buff));
+			Cleaf_t_size = StringToInt(buff);
+			
+			//CCollisionBSPData
+			GameConfGetKeyValue(gconf, "CCollisionBSPData::map_rootnode", buff, sizeof(buff));
+			CCollisionBSPData_offsets[CCollisionBSPData_map_rootnode] = StringToInt(buff);
+			GameConfGetKeyValue(gconf, "CCollisionBSPData::numbrushsides", buff, sizeof(buff));
+			CCollisionBSPData_offsets[CCollisionBSPData_numbrushsides] = StringToInt(buff);
+			GameConfGetKeyValue(gconf, "CCollisionBSPData::map_brushsides", buff, sizeof(buff));
+			CCollisionBSPData_offsets[CCollisionBSPData_map_brushsides] = StringToInt(buff);
+			GameConfGetKeyValue(gconf, "CCollisionBSPData::numboxbrushes", buff, sizeof(buff));
+			CCollisionBSPData_offsets[CCollisionBSPData_numboxbrushes] = StringToInt(buff);
+			GameConfGetKeyValue(gconf, "CCollisionBSPData::map_boxbrushes", buff, sizeof(buff));
+			CCollisionBSPData_offsets[CCollisionBSPData_map_boxbrushes] = StringToInt(buff);
+			GameConfGetKeyValue(gconf, "CCollisionBSPData::numleafs", buff, sizeof(buff));
+			CCollisionBSPData_offsets[CCollisionBSPData_numleafs] = StringToInt(buff);
+			GameConfGetKeyValue(gconf, "CCollisionBSPData::map_leafs", buff, sizeof(buff));
+			CCollisionBSPData_offsets[CCollisionBSPData_map_leafs] = StringToInt(buff);
+			GameConfGetKeyValue(gconf, "CCollisionBSPData::numleafbrushes", buff, sizeof(buff));
+			CCollisionBSPData_offsets[CCollisionBSPData_numleafbrushes] = StringToInt(buff);
+			GameConfGetKeyValue(gconf, "CCollisionBSPData::map_leafbrushes", buff, sizeof(buff));
+			CCollisionBSPData_offsets[CCollisionBSPData_map_leafbrushes] = StringToInt(buff);
+			GameConfGetKeyValue(gconf, "CCollisionBSPData::numcmodels", buff, sizeof(buff));
+			CCollisionBSPData_offsets[CCollisionBSPData_numcmodels] = StringToInt(buff);
+			GameConfGetKeyValue(gconf, "CCollisionBSPData::map_cmodels", buff, sizeof(buff));
+			CCollisionBSPData_offsets[CCollisionBSPData_map_cmodels] = StringToInt(buff);
+			GameConfGetKeyValue(gconf, "CCollisionBSPData::numbrushes", buff, sizeof(buff));
+			CCollisionBSPData_offsets[CCollisionBSPData_numbrushes] = StringToInt(buff);
+			GameConfGetKeyValue(gconf, "CCollisionBSPData::map_brushes", buff, sizeof(buff));
+			CCollisionBSPData_offsets[CCollisionBSPData_map_brushes] = StringToInt(buff);
+		}
 	}
 	else if(gOSType == OSLinux)
 	{

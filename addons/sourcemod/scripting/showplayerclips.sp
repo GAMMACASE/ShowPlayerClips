@@ -25,7 +25,7 @@ public Plugin myinfo =
 	name = "Show Player Clip Brushes",
 	author = "GAMMA CASE",
 	description = "Shows player clip brushes on map.",
-	version = "1.1.0",
+	version = "1.1.1",
 	url = "https://github.com/GAMMACASE/ShowPlayerClips"
 };
 
@@ -424,7 +424,7 @@ void GetOSType(Handle gconf)
 {
 	gOSType = view_as<OSType>(GameConfGetOffset(gconf, "WinOrLin"));
 	
-	ASSERT(gOSType == OSUnknown, "Failed to get OS type. Make sure gamedata file is in gamedata folder, and you are using windows or linux.");
+	ASSERT_MSG(gOSType != OSUnknown, "Failed to get OS type. Make sure gamedata file is in gamedata folder, and you are using windows or linux.");
 }
 
 void SetupDhooks(Handle gconf)
@@ -436,7 +436,19 @@ void SetupDhooks(Handle gconf)
 		
 		DHookAddParam(dhook, HookParamType_Int, .custom_register = (gEngineVer == Engine_CSGO ? DHookRegister_ECX : DHookRegister_Default));
 		
-		ASSERT(!DHookEnableDetour(dhook, false, DrawLeafVis_CallBack), "Failed to enable detour for \"DrawLeafVis\".");
+		ASSERT_MSG(DHookEnableDetour(dhook, false, DrawLeafVis_CallBack), "Failed to enable detour for \"DrawLeafVis\".");
+		
+		if(gEngineVer == Engine_CSS)
+		{
+			//FindMinBrush
+			DHOOK_SETUP_DETOUR(dhook2, CallConv_CDECL, ReturnType_Int, ThisPointer_Ignore, gconf, SDKConf_Signature, "FindMinBrush");
+			
+			DHookAddParam(dhook2, HookParamType_Int);
+			DHookAddParam(dhook2, HookParamType_Int);
+			DHookAddParam(dhook2, HookParamType_Int);
+			
+			ASSERT_MSG(DHookEnableDetour(dhook2, false, FindMinBrush_CallBack), "Failed to enable detour for \"FindMinBrush\".");
+		}
 	}
 }
 
@@ -446,26 +458,26 @@ void SetupSDKCalls(Handle gconf)
 	{
 		//LeafVisDraw
 		StartPrepSDKCall(SDKCall_Static);
-		ASSERT(!PrepSDKCall_SetFromConf(gconf, SDKConf_Signature, "LeafVisDraw"), "Failed to get \"LeafVisDraw\" signature.");
+		ASSERT_MSG(PrepSDKCall_SetFromConf(gconf, SDKConf_Signature, "LeafVisDraw"), "Failed to get \"LeafVisDraw\" signature.");
 		
 		ghLeafVisDraw = EndPrepSDKCall();
-		ASSERT(!ghLeafVisDraw, "Failed to create SDKCall to \"LeafVisDraw\".");
+		ASSERT_MSG(ghLeafVisDraw, "Failed to create SDKCall to \"LeafVisDraw\".");
 		
 		
 		//RecomputeClipbrushes
 		StartPrepSDKCall(SDKCall_Static);
-		ASSERT(!PrepSDKCall_SetFromConf(gconf, SDKConf_Signature, "RecomputeClipbrushes"), "Failed to get \"RecomputeClipbrushes\" signature.");
+		ASSERT_MSG(PrepSDKCall_SetFromConf(gconf, SDKConf_Signature, "RecomputeClipbrushes"), "Failed to get \"RecomputeClipbrushes\" signature.");
 		
 		PrepSDKCall_AddParameter(SDKType_Bool, SDKPass_Plain);
 		
 		ghRecomputeClipbrushes = EndPrepSDKCall();
-		ASSERT(!ghRecomputeClipbrushes, "Failed to create SDKCall to \"RecomputeClipbrushes\".");
+		ASSERT_MSG(ghRecomputeClipbrushes, "Failed to create SDKCall to \"RecomputeClipbrushes\".");
 	}
 	else if(gOSType == OSLinux)
 	{	
 		//PolyFromPlane
 		StartPrepSDKCall(SDKCall_Static);
-		ASSERT(!PrepSDKCall_SetFromConf(gconf, SDKConf_Signature, "PolyFromPlane"), "Failed to get \"PolyFromPlane\" signature.");
+		ASSERT_MSG(PrepSDKCall_SetFromConf(gconf, SDKConf_Signature, "PolyFromPlane"), "Failed to get \"PolyFromPlane\" signature.");
 		
 		PrepSDKCall_AddParameter(SDKType_PlainOldData, SDKPass_Plain);
 		PrepSDKCall_AddParameter(SDKType_Vector, SDKPass_ByRef, .encflags = VENCODE_FLAG_COPYBACK);
@@ -475,11 +487,11 @@ void SetupSDKCalls(Handle gconf)
 		PrepSDKCall_SetReturnInfo(SDKType_PlainOldData, SDKPass_Plain);
 		
 		ghPolyFromPlane = EndPrepSDKCall();
-		ASSERT(!ghPolyFromPlane, "Failed to create SDKCall to \"PolyFromPlane\".");
+		ASSERT_MSG(ghPolyFromPlane, "Failed to create SDKCall to \"PolyFromPlane\".");
 		
 		//ClipPolyToPlane
 		StartPrepSDKCall(SDKCall_Static);
-		ASSERT(!PrepSDKCall_SetFromConf(gconf, SDKConf_Signature, "ClipPolyToPlane"), "Failed to get \"ClipPolyToPlane\" signature.");
+		ASSERT_MSG(PrepSDKCall_SetFromConf(gconf, SDKConf_Signature, "ClipPolyToPlane"), "Failed to get \"ClipPolyToPlane\" signature.");
 		
 		PrepSDKCall_AddParameter(SDKType_PlainOldData, SDKPass_Plain);
 		PrepSDKCall_AddParameter(SDKType_PlainOldData, SDKPass_Plain);
@@ -491,11 +503,11 @@ void SetupSDKCalls(Handle gconf)
 		PrepSDKCall_SetReturnInfo(SDKType_PlainOldData, SDKPass_Plain);
 		
 		ghClipPolyToPlane = EndPrepSDKCall();
-		ASSERT(!ghClipPolyToPlane, "Failed to create SDKCall to \"ClipPolyToPlane\".");
+		ASSERT_MSG(ghClipPolyToPlane, "Failed to create SDKCall to \"ClipPolyToPlane\".");
 		
 		//malloc
 		StartPrepSDKCall(SDKCall_Static);
-		ASSERT(!PrepSDKCall_SetFromConf(gconf, SDKConf_Signature, "malloc"), "Failed to get \"malloc\" signature.");
+		ASSERT_MSG(PrepSDKCall_SetFromConf(gconf, SDKConf_Signature, "malloc"), "Failed to get \"malloc\" signature.");
 		
 		PrepSDKCall_AddParameter(SDKType_PlainOldData, SDKPass_Plain);
 		if(gEngineVer == Engine_CSS)
@@ -504,35 +516,35 @@ void SetupSDKCalls(Handle gconf)
 		PrepSDKCall_SetReturnInfo(SDKType_PlainOldData, SDKPass_Plain);
 		
 		ghMalloc = EndPrepSDKCall();
-		ASSERT(!ghMalloc, "Failed to create SDKCall to \"malloc\".");
+		ASSERT_MSG(ghMalloc, "Failed to create SDKCall to \"malloc\".");
 		
 		//free
 		StartPrepSDKCall(SDKCall_Static);
-		ASSERT(!PrepSDKCall_SetFromConf(gconf, SDKConf_Signature, "free"), "Failed to get \"free\" signature.");
+		ASSERT_MSG(PrepSDKCall_SetFromConf(gconf, SDKConf_Signature, "free"), "Failed to get \"free\" signature.");
 		
 		PrepSDKCall_AddParameter(SDKType_PlainOldData, SDKPass_Plain);
 		if(gEngineVer == Engine_CSS)
 			PrepSDKCall_AddParameter(SDKType_PlainOldData, SDKPass_Plain);
 		
 		ghFree = EndPrepSDKCall();
-		ASSERT(!ghFree, "Failed to create SDKCall to \"free\".");
+		ASSERT_MSG(ghFree, "Failed to create SDKCall to \"free\".");
 	}
 }
 
 void GetCollisionBSPData(Handle gconf)
 {
 	gpBSPData = CCollisionBSPData(GameConfGetAddress(gconf, "g_BSPData"));
-	ASSERT(gpBSPData.Address == Address_Null, "Invalid gpBSPData retrieved from \"g_BSPData\" address.");
+	ASSERT_MSG(gpBSPData.Address != Address_Null, "Invalid gpBSPData retrieved from \"g_BSPData\" address.");
 }
 
 stock void BytePatchTELimit(Handle gconf)
 {
 	//TELimit
 	gTELimitAddress = GameConfGetAddress(gconf, "TELimit");
-	ASSERT(gTELimitAddress == Address_Null, "Failed to get addres of \"TELimit\".");
+	ASSERT_MSG(gTELimitAddress != Address_Null, "Failed to get addres of \"TELimit\".");
 	
 	gTELimitDataSize = GameConfGetOffset(gconf, "TELimitSize");
-	ASSERT(gTELimitDataSize == 0, "0 length found in gamedata for \"TELimitSize\".");
+	ASSERT_MSG(gTELimitDataSize != 0, "0 length found in gamedata for \"TELimitSize\".");
 	
 	for(int i = 0; i < gTELimitDataSize; i++)
 		gTELimitData[i] = LoadFromAddress(gTELimitAddress + i, NumberType_Int8);
@@ -631,7 +643,15 @@ int FindMinBrush(int nodenum, int brushIndex)
 		if(nodenum < 0)
 		{
 			leafIndex = -1 - nodenum;
+			
+			if(leafIndex < 0 || leafIndex >= gpBSPData.map_leafs.m_nCount)
+				return gpBSPData.numbrushes;
+			
 			leaf = view_as<Cleaf_t>(gpBSPData.map_leafs.Get(leafIndex, Cleaf_t.Size()));
+			
+			if(leaf.firstleafbrush >= gpBSPData.map_leafbrushes.m_nCount)
+				return gpBSPData.numbrushes;
+			
 			firstbrush = gpBSPData.map_leafbrushes.GetValue(leaf.firstleafbrush, 2, NumberType_Int16);
 			
 			if(firstbrush < brushIndex)
@@ -863,6 +883,49 @@ public MRESReturn DrawLeafVis_CallBack(Handle hParams)
 	return MRES_Supercede;
 }
 
+public MRESReturn FindMinBrush_CallBack(Handle hReturn, Handle hParams)
+{
+	DHookSetReturn(hReturn, FindMinBrush2(DHookGetParam(hParams, 1), DHookGetParam(hParams, 2), DHookGetParam(hParams, 3)));
+	
+	return MRES_Supercede;
+}
+
+int FindMinBrush2(CCollisionBSPData bsp, int nodenum, int brushIndex)
+{
+	int leafIndex, firstbrush;
+	Cleaf_t leaf;
+	Cnode_t node;
+	
+	for(;;)
+	{
+		if(nodenum < 0)
+		{
+			leafIndex = -1 - nodenum;
+			
+			if(leafIndex < 0 || leafIndex >= bsp.map_leafs.m_nCount)
+				return bsp.numbrushes;
+			
+			leaf = view_as<Cleaf_t>(bsp.map_leafs.Get(leafIndex, Cleaf_t.Size()));
+			
+			if(leaf.firstleafbrush >= bsp.map_leafbrushes.m_nCount)
+				return bsp.numbrushes;
+			
+			firstbrush = bsp.map_leafbrushes.GetValue(leaf.firstleafbrush, 2, NumberType_Int16);
+			
+			if(firstbrush < brushIndex)
+				brushIndex = firstbrush;
+			
+			break;
+		}
+		
+		node = view_as<Cnode_t>(bsp.map_rootnode.Get(nodenum));
+		brushIndex = FindMinBrush2(bsp, node.children(0), brushIndex);
+		nodenum = node.children(1);
+	}
+	
+	return brushIndex;
+}
+
 void CalculateVertsWindows()
 {
 	gFinalVerts[gpVisIdx] = new VertsList();
@@ -981,14 +1044,14 @@ stock Address Malloc(int size)
 	else if(gEngineVer == Engine_CSS)
 		addr = SDKCall(ghMalloc, 0, size);
 	
-	ASSERT_FMT(addr == Address_Null, "Failed to allocate memory. (%i)", size);
+	ASSERT_FMT(addr != Address_Null, "Failed to allocate memory. (%i)", size);
 	
 	return addr;
 }
 
 stock void Free(Address addr)
 {
-	ASSERT(addr == Address_Null, "Null address passed to free function.");
+	ASSERT_MSG(addr != Address_Null, "Null address passed to free function.");
 	
 	if(gEngineVer == Engine_CSGO)
 		SDKCall(ghFree, addr);

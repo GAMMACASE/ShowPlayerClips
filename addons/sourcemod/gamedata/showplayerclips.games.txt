@@ -304,6 +304,12 @@
 		
 		"Signatures"
 		{
+			"FindMinBrush"
+			{
+				"library"		"engine"
+				"windows"		"\x55\x8B\xEC\x8B\x45\x0C\x8B\x55\x10"
+			}
+			
 			"LeafVisDraw"
 			{
 				"library"		"engine"
