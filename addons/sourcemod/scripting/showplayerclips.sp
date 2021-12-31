@@ -83,6 +83,7 @@ float gRefreshRate,
 	gTickInterval;
 
 bool gClipsPresent;
+bool gCommandsRegistered = false;
 
 Leafvis_t gpVis[PVIS_COUNT];
 
@@ -99,7 +100,6 @@ public void OnPluginStart()
 	AutoExecConfig();
 	
 	LoadTranslations(TRANSLATE_FILENAME);
-	RegConsoleCommands();
 	
 	gClientsToDraw = new ArrayList();
 	
@@ -131,6 +131,16 @@ public void OnPluginEnd()
 		StoreToAddress(gTELimitAddress, gTELimitData[i], NumberType_Int8);
 }
 
+public void OnConfigsExecuted()
+{
+	char buff[PLATFORM_MAX_PATH];
+	gCvarBeamMaterial.GetString(buff, sizeof(buff));
+	gModelIndex = PrecacheModel(buff, true);
+
+	if(!gCommandsRegistered)
+		RegConsoleCommands();
+}
+
 public void RegConsoleCommands()
 {
 	char buff[1024];
@@ -155,14 +165,11 @@ public void RegConsoleCommands()
 		reg.GetSubString(0, sMatch, sizeof(sMatch), i);
 		RegConsoleCmd(sMatch, SM_ShowClipBrushes, "Shows player clip brushes.");
 	}
+	gCommandsRegistered = true;
 }
 
 public void OnMapStart()
 {
-	char buff[PLATFORM_MAX_PATH];
-	gCvarBeamMaterial.GetString(buff, sizeof(buff));
-	gModelIndex = PrecacheModel(buff, true);
-	
 	if(gOSType == OSWindows)
 	{
 		SDKCall(ghRecomputeClipbrushes, true);
