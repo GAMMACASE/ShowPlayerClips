@@ -434,13 +434,11 @@ public Action SM_ShowClipBrushes(int client, int args)
 	{
 		gClientsToDraw.Erase(idx);
 		ReplyToCommand(client, "%T", "playerclips_disabled", client);
-		gBShow[client] = false;
 	}
 	else
 	{
 		gClientsToDraw.Push(GetClientUserId(client));
 		ReplyToCommand(client, "%T", "playerclips_enabled", client);
-		gBShow[client] = true;
 	}
 
 	SetClientCookie(client, ghShowCookie, idx == -1 ? "1" : "0");
