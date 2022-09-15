@@ -59,7 +59,8 @@ ConVar gCvarCommands,
 	gCvarBeamAlpha,
 	gCvarBeamWidth,
 	gCvarBeamSearchDelta,
-	gCvarBeamMaterial;
+	gCvarBeamMaterial,
+	gCvarPersist;
 //	gCvarDynamicTimer;
 
 ArrayList gClientsToDraw;
@@ -98,6 +99,7 @@ public void OnPluginStart()
 	gCvarBeamWidth = CreateConVar("spc_beams_width", "1.0", "Beams width, lower = less visible from distance.", .hasMin = true);
 	gCvarBeamSearchDelta = CreateConVar("spc_beams_search_delta", "0.5", "Leave this value as default or a bit smaller then default. Lower the value, more precision for beams, more beams drawn, lower the fps will be. Set to 0 to disable. Map restart needed for this to take effect.", .hasMin = true);
 	gCvarBeamMaterial = CreateConVar("spc_beams_material", "sprites/laserbeam.vmt", "Material used for beams. Server restart needed for this to take effect.");
+	gCvarPersist = CreateConVar("spc_persist", "0", "Persist client preferences between maps and server resets", _, true, 0.0, true, 1.0);
 	//TODO: Possibly a bad idea
 	//gCvarDynamicTimer = CreateConVar("spc_beams_refreshtime_dynamic", "0", "Use dynamically calculated refresh time, may speed up showing beams when toggling command.", .hasMin = true, .hasMax = true, .max = 1.0);
 	AutoExecConfig();
@@ -124,7 +126,7 @@ public void OnPluginStart()
 	
 	delete gconf;
 
-	ghShowCookie = RegClientCookie("spc_show", "Enable or disable player clips",CookieAccess_Protected);
+	ghShowCookie = RegClientCookie("spc_show", "Enable or disable player clips", CookieAccess_Protected);
 }
 
 public void OnPluginEnd()
@@ -148,6 +150,8 @@ public void OnConfigsExecuted()
 
 public void OnClientCookiesCached(int client)
 {
+	if(!gCvarPersist.BoolValue)
+		return;
 	char str[8];
 	GetClientCookie(client, ghShowCookie, str, sizeof(str));
 	if(strlen(str) == 0) {
