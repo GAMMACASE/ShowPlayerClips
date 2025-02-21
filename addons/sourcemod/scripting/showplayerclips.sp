@@ -10,8 +10,7 @@
 #define GAMECONF_FILENAME "showplayerclips.games"
 #define TRANSLATE_FILENAME "showplayerclips.phrases"
 
-#define MAX_TEMPENTS_SEND_CSS (255 - 24) //Rised to 255 with bytepatching.
-#define MAX_TEMPENTS_SEND_CSGO (255 - 24)
+#define MAX_TEMPENTS_SEND (255 - 24)
 #define PVIS_COUNT 3
 #define TEMPENT_MIN_LIFETIME 1.0
 #define TEMPENT_MAX_LIFETIME 25.0
@@ -67,12 +66,6 @@ ArrayList gClientsToDraw;
 
 VertsList gFinalVerts[PVIS_COUNT];
 
-//TElimit bytepatch data
-int gTELimitData[8];
-int gTELimitDataSize;
-Address gTELimitAddress;
-//==-
-
 //Linux only
 CCollisionBSPData gpBSPData;
 //==-
@@ -123,9 +116,6 @@ public void OnPluginStart()
 	SetupDhooks(gconf);
 	SetupSDKCalls(gconf);
 	
-	if(gEngineVer == Engine_CSS)
-		BytePatchTELimit(gconf);
-	
 	if(gOSType == OSLinux)
 		GetCollisionBSPData(gconf);
 	
@@ -135,15 +125,7 @@ public void OnPluginStart()
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
 {
 	gLate = late;
-}
-
-public void OnPluginEnd()
-{
-	if(gTELimitAddress == Address_Null)
-		return;
-	
-	for(int i = 0; i < gTELimitDataSize; i++)
-		StoreToAddress(gTELimitAddress, gTELimitData[i], NumberType_Int8);
+	return APLRes_Success;
 }
 
 public void OnConfigsExecuted()
@@ -426,7 +408,7 @@ stock int FilterClients(const int[] clients, int size, int[] outclients)
 
 stock int GetMaxTempEntsCount()
 {
-	return gEngineVer == Engine_CSGO ? MAX_TEMPENTS_SEND_CSGO : MAX_TEMPENTS_SEND_CSS
+	return MAX_TEMPENTS_SEND;
 }
 
 stock void GetClientsToDraw(int[] clients, int size)
@@ -584,21 +566,6 @@ void GetCollisionBSPData(Handle gconf)
 {
 	gpBSPData = CCollisionBSPData(GameConfGetAddress(gconf, "g_BSPData"));
 	ASSERT_MSG(gpBSPData.Address != Address_Null, "Invalid gpBSPData retrieved from \"g_BSPData\" address.");
-}
-
-stock void BytePatchTELimit(Handle gconf)
-{
-	//TELimit
-	gTELimitAddress = GameConfGetAddress(gconf, "TELimit");
-	ASSERT_MSG(gTELimitAddress != Address_Null, "Failed to get addres of \"TELimit\".");
-	
-	gTELimitDataSize = GameConfGetOffset(gconf, "TELimitSize");
-	ASSERT_MSG(gTELimitDataSize != 0, "0 length found in gamedata for \"TELimitSize\".");
-	
-	for(int i = 0; i < gTELimitDataSize; i++)
-		gTELimitData[i] = LoadFromAddress(gTELimitAddress + i, NumberType_Int8);
-	
-	StoreToAddress(gTELimitAddress, 0x90909090, NumberType_Int32);
 }
 
 void RecomputeClipbrushes()

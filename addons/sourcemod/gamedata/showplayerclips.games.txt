@@ -272,15 +272,6 @@
 			"BrushSideInfo_t::thin"				"18"
 		}
 		
-		"Offsets"
-		{
-			"TELimitSize"
-			{
-				"windows"		"4"
-				"linux"			"4"
-			}
-		}
-		
 		"Addresses"
 		{
 			"g_BSPData"
@@ -290,21 +281,6 @@
                     "signature" "g_BSPData"
                 }
             }
-			
-			"TELimit"
-            {
-                "linux"
-                {
-                    "signature" "CBaseServer::WriteTempEntities"
-					"offset"	"400"
-                }
-				
-				"windows"
-                {
-                    "signature" "CBaseServer::WriteTempEntities"
-					"offset"	"261"
-                }
-            }
 		}
 		
 		"Signatures"
@@ -312,25 +288,25 @@
 			"FindMinBrush"
 			{
 				"library"		"engine"
-				"windows"		"\x55\x8B\xEC\x8B\x45\x0C\x8B\x55\x10"
+				"windows"		"\x55\x8B\xEC\x8B\x45\x2A\x8B\x55\x2A\x56\x57\x8B\x7D\x2A\x85\xC0"
 			}
 			
 			"LeafVisDraw"
 			{
 				"library"		"engine"
-				"windows"		"\x55\x8B\xEC\xA1\x2A\x2A\x2A\x2A\x81\xEC\x7C\x03\x00\x00"
+				"windows"		"\x55\x8B\xEC\xA1\x2A\x2A\x2A\x2A\x81\xEC\x2A\x2A\x2A\x2A\x85\xC0\x74\x2A\x50\xE8\x2A\x2A\x2A\x2A\x83\xC4\x2A\xA1"
 			}
 		
 			"DrawLeafVis"
 			{
 				"library"		"engine"
-				"windows"		"\x55\x8B\xEC\x81\xEC\xFC\x01\x00\x00\x8B\x0D\x2A\x2A\x2A\x2A"
+				"windows"		"\x55\x8B\xEC\x81\xEC\x2A\x2A\x2A\x2A\x8B\x0D\x2A\x2A\x2A\x2A\x56\x8B\x01\xFF\x90\x2A\x2A\x2A\x2A\x8B\xF0\x89\x75\x2A\x85\xF6\x74\x2A\x8B\x06\x8B\xCE\xFF\x50\x2A\x8B\x0D"
 			}
 			
 			"RecomputeClipbrushes"
 			{
 				"library"		"engine"
-				"windows"		"\x55\x8B\xEC\x83\xEC\x48\x56\x57"
+				"windows"		"\x55\x8B\xEC\x83\xEC\x2A\x56\x57\xBE"
 			}
 			
 			"PolyFromPlane"
@@ -355,13 +331,6 @@
 			{
 				"library"		"engine"
 				"linux"			"@_ZN12CEngineTrace12GetBrushInfoEiP10CUtlVectorI8Vector4D10CUtlMemoryIS1_iEEPi"
-			}
-			
-			"CBaseServer::WriteTempEntities"
-			{
-				"library"		"engine"
-				"linux"			"@_ZN11CBaseServer17WriteTempEntitiesEP11CBaseClientP14CFrameSnapshotS3_R8bf_writei"
-				"windows"		"\x55\x8B\xEC\xB8\x94\x65\x04\x00"
 			}
 			
 			"malloc"
